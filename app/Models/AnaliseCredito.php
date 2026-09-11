@@ -4,11 +4,14 @@ namespace App\Models;
 
 use App\Enums\StatusAnalise;
 use App\Enums\TipoCredito;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AnaliseCredito extends Model
 {
+    use HasFactory;
+
     protected $table = 'analises_credito';
 
     protected $fillable = [

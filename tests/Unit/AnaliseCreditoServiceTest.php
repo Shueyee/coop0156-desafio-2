@@ -37,7 +37,6 @@ class AnaliseCreditoServiceTest extends TestCase
 
     public function test_aprova_com_taxa_reduzida_para_score_alto(): void
     {
-        // Exemplo do README: 10.000 a 2,9% => parcela de 1.123,33
         $resultado = (new AnaliseCreditoService())->avaliar(
             rendaMensal: 5000,
             score: 850,
@@ -65,7 +64,6 @@ class AnaliseCreditoServiceTest extends TestCase
 
     public function test_reprova_por_comprometimento_de_renda(): void
     {
-        // Renda só passa da mínima (1.600), mas valor solicitado é alto demais pra ela.
         $resultado = (new AnaliseCreditoService())->avaliar(
             rendaMensal: 1600,
             score: 850,
@@ -74,7 +72,6 @@ class AnaliseCreditoServiceTest extends TestCase
 
         $this->assertSame(StatusAnalise::REPROVADO, $resultado->status);
         $this->assertSame('Comprometimento de renda superior a 30%', $resultado->motivoRejeicao);
-        // Mesmo reprovado, taxa e parcela ficam registradas - foi por causa delas que reprovou.
         $this->assertSame(2.9, $resultado->taxaJuros);
         $this->assertNotNull($resultado->valorParcela);
     }
