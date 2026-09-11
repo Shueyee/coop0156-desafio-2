@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Http\Requests\StoreClienteRequest;
+use App\Http\Requests\UpdateClienteRequest;
+use App\Models\Cliente;
+use Illuminate\Http\Response;
 
 class ClienteController extends Controller
 {
@@ -15,8 +18,7 @@ class ClienteController extends Controller
      */
     public function index()
     {
-        // TODO: Retornar a lista paginada de clientes.
-        return response()->json(['message' => 'Not implemented'], 501);
+        return response()->json(Cliente::paginate(15), Response::HTTP_OK);
     }
 
     /**
@@ -24,20 +26,14 @@ class ClienteController extends Controller
      *
      * POST /api/clientes
      *
-     * Validações esperadas:
-     *  - nome: obrigatório, string
-     *  - cpf: obrigatório, 11 dígitos numéricos, único na tabela clientes
-     *  - email: obrigatório, formato e-mail válido, único na tabela clientes
-     *  - telefone: opcional, string
-     *  - renda_mensal: obrigatório, numérico, mínimo de 0
-     *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Http\Requests\StoreClienteRequest  $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function store(Request $request)
+    public function store(StoreClienteRequest $request)
     {
-        // TODO: Validar os dados de entrada e persistir o cliente no banco.
-        return response()->json(['message' => 'Not implemented'], 501);
+        $cliente = Cliente::create($request->validated());
+
+        return response()->json($cliente, Response::HTTP_CREATED);
     }
 
     /**
@@ -50,8 +46,13 @@ class ClienteController extends Controller
      */
     public function show($id)
     {
-        // TODO: Buscar e retornar o cliente pelo ID (retornar 404 se não encontrado).
-        return response()->json(['message' => 'Not implemented'], 501);
+        $cliente = Cliente::find($id);
+
+        if (!$cliente) {
+            return response()->json(['message' => 'Cliente não encontrado.'], Response::HTTP_NOT_FOUND);
+        }
+
+        return response()->json($cliente, Response::HTTP_OK);
     }
 
     /**
@@ -59,14 +60,21 @@ class ClienteController extends Controller
      *
      * PUT /api/clientes/{id}
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Http\Requests\UpdateClienteRequest  $request
      * @param  int  $id
      * @return \Illuminate\Http\JsonResponse
      */
-    public function update(Request $request, $id)
+    public function update(UpdateClienteRequest $request, $id)
     {
-        // TODO: Validar os dados e atualizar o cliente (retornar 404 se não encontrado).
-        return response()->json(['message' => 'Not implemented'], 501);
+        $cliente = Cliente::find($id);
+
+        if (!$cliente) {
+            return response()->json(['message' => 'Cliente não encontrado.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $cliente->update($request->validated());
+
+        return response()->json($cliente, Response::HTTP_OK);
     }
 
     /**
@@ -79,7 +87,14 @@ class ClienteController extends Controller
      */
     public function destroy($id)
     {
-        // TODO: Remover o cliente (retornar 404 se não encontrado, 204 No Content se removido).
-        return response()->json(['message' => 'Not implemented'], 501);
+        $cliente = Cliente::find($id);
+
+        if (! $cliente) {
+            return response()->json(['message' => 'Cliente não encontrado.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $cliente->delete();
+
+        return response()->json(null, Response::HTTP_NO_CONTENT);
     }
 }
