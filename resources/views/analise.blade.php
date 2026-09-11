@@ -84,7 +84,9 @@
                 <span class="bg-emerald-500/10 text-emerald-400 p-2 rounded-lg text-sm">01</span>
                 Nova Solicitação de Crédito
             </h2>
-            
+
+            <div id="erro-solicitacao" class="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6 text-red-400 text-sm whitespace-pre-line hidden"></div>
+
             <form id="form-analise" class="space-y-6">
                 <!-- Nome Completo -->
                 <div>
@@ -251,25 +253,134 @@
         </div>
     </footer>
 
-    <!--
-      -- =========================================================================
-      -- INSTRUÇÕES DE IMPLEMENTAÇÃO JAVASCRIPT (DESAFIO PARA O CANDIDATO)
-      -- =========================================================================
-      -- O candidato deve escrever o JavaScript abaixo para integrar com as APIs.
-      -- Requisitos:
-      --   1. Tratar a submissão do formulário 'form-analise'.
-      --   2. Fazer requisição POST para '/api/analise-credito' com os dados do form.
-      --   3. Se REPROVADO: exibir o card de resultado com o motivo da recusa.
-      --   4. Se APROVADO: exibir o card de resultado e um botão/link que redirecione
-      --      o usuário para '/simulacao/{id}' para visualizar as condições antes de contratar.
-      -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // O candidato deve preencher a integração aqui.
-
             const form = document.getElementById('form-analise');
+            const btnSolicitar = document.getElementById('btn-solicitar');
+            const txtSolicitar = document.getElementById('txt-solicitar');
+            const spinnerSolicitar = document.getElementById('loading-spinner');
 
-            // TODO: Adicionar Event Listeners e requisições para a API Laravel.
+            const resultadoVazio = document.getElementById('resultado-vazio');
+            const resultadoAnalise = document.getElementById('resultado-analise');
+            const dadosAprovado = document.getElementById('dados-aprovado');
+            const dadosReprovado = document.getElementById('dados-reprovado');
+            const containerContratacao = document.getElementById('container-contratacao');
+            const statusBadge = document.getElementById('status-indicator-badge');
+            const btnContratar = document.getElementById('btn-contratar');
+            const erroSolicitacao = document.getElementById('erro-solicitacao');
+
+            let analiseAtualId = null;
+
+            function formatarMoeda(valor) {
+                return Number(valor).toLocaleString('pt-BR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                });
+            }
+
+            function mostrarErro(mensagem) {
+                erroSolicitacao.textContent = mensagem;
+                erroSolicitacao.classList.remove('hidden');
+            }
+
+            function esconderErro() {
+                erroSolicitacao.classList.add('hidden');
+            }
+
+            function definirCarregando(carregando) {
+                btnSolicitar.disabled = carregando;
+                spinnerSolicitar.classList.toggle('hidden', !carregando);
+                txtSolicitar.textContent = carregando ? 'Consultando...' : 'Solicitar Análise de Crédito';
+            }
+
+            function exibirResultado(analise) {
+                analiseAtualId = analise.id;
+
+                resultadoVazio.classList.add('hidden');
+                resultadoAnalise.classList.remove('hidden');
+
+                document.getElementById('res-nome').textContent = analise.nome;
+                document.getElementById('res-cpf').textContent = analise.cpf;
+                document.getElementById('res-score').textContent = analise.score ?? '-';
+
+                const aprovado = analise.status === 'aprovado';
+
+                const resStatus = document.getElementById('res-status');
+                resStatus.textContent = aprovado ? 'Aprovado' : 'Reprovado';
+                resStatus.classList.toggle('text-emerald-400', aprovado);
+                resStatus.classList.toggle('text-red-400', !aprovado);
+
+                statusBadge.innerHTML = aprovado
+                    ? '<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">APROVADO</span>'
+                    : '<span class="px-3 py-1 rounded-full text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/20">REPROVADO</span>';
+
+                dadosAprovado.classList.toggle('hidden', !aprovado);
+                dadosReprovado.classList.toggle('hidden', aprovado);
+                containerContratacao.classList.toggle('hidden', !aprovado);
+
+                if (aprovado) {
+                    const taxa = Number(analise.taxa_juros);
+                    const parcela = Number(analise.valor_parcela);
+                    const renda = Number(analise.renda_mensal);
+                    const comprometimento = (parcela / renda) * 100;
+
+                    document.getElementById('res-taxa').textContent = taxa.toFixed(1).replace('.', ',') + '% a.m.';
+                    document.getElementById('res-parcela').textContent = 'R$ ' + formatarMoeda(parcela);
+                    document.getElementById('res-comprometimento').textContent = comprometimento.toFixed(1).replace('.', ',') + '%';
+                } else {
+                    document.getElementById('res-motivo').textContent = analise.motivo_rejeicao ?? 'Não especificado.';
+                }
+            }
+
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                esconderErro();
+                definirCarregando(true);
+
+                const dados = {
+                    nome: document.getElementById('nome').value,
+                    cpf: document.getElementById('cpf').value.replace(/\D/g, ''),
+                    renda_mensal: document.getElementById('renda_mensal').value,
+                    tipo_credito: document.getElementById('tipo_credito').value,
+                    valor_solicitado: document.getElementById('valor_solicitado').value,
+                };
+
+                try {
+                    const response = await fetch('/api/analise-credito', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify(dados),
+                    });
+
+                    const resultado = await response.json();
+
+                    if (response.status === 422) {
+                        const mensagens = Object.values(resultado.errors ?? {}).flat().join('\n');
+                        mostrarErro('Verifique os dados informados:\n' + mensagens);
+                        return;
+                    }
+
+                    if (!response.ok) {
+                        mostrarErro(resultado.message ?? 'Não foi possível concluir a análise no momento. Tente novamente.');
+                        return;
+                    }
+
+                    exibirResultado(resultado);
+                } catch (erro) {
+                    mostrarErro('Não foi possível se comunicar com o servidor. Tente novamente.');
+                } finally {
+                    definirCarregando(false);
+                }
+            });
+
+            btnContratar.addEventListener('click', () => {
+                if (analiseAtualId) {
+                    window.location.href = '/simulacao/' + analiseAtualId;
+                }
+            });
         });
     </script>
 </body>

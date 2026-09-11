@@ -173,6 +173,8 @@
                 </div>
             @endif
 
+            <div id="erro-contratacao" class="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6 text-red-400 text-sm hidden"></div>
+
             <h3 class="text-xl font-semibold text-white mb-2">Confirmar Contratação</h3>
             <p class="text-slate-400 text-sm mb-8 max-w-md mx-auto">
                 Ao confirmar, você está simulando a solicitação formal de contratação deste crédito. Esta ação não pode ser desfeita.
@@ -219,21 +221,46 @@
         <p>&copy; 2026 Coop0156. Desafio Técnico Laravel.</p>
     </footer>
 
-    <!--
-      -- =========================================================================
-      -- INSTRUÇÕES (CANDIDATO): Implemente o JavaScript abaixo.
-      -- =========================================================================
-      -- Ao clicar em "Confirmar Contratação", o candidato deve:
-      --   1. Mostrar o spinner e desabilitar o botão para evitar clique duplo.
-      --   2. Fazer requisição POST para '/api/analise-credito/{{ $analise->id }}/contratar'.
-      --   3. Em caso de sucesso (HTTP 200), exibir o modal de sucesso (#modal-sucesso).
-      --   4. Em caso de erro, exibir uma mensagem de feedback adequada para o usuário.
-      -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const btnConfirmar = document.getElementById('btn-confirmar');
+            const txtConfirmar = document.getElementById('txt-confirmar');
+            const spinnerConfirmar = document.getElementById('spinner-confirmar');
+            const modalSucesso = document.getElementById('modal-sucesso');
+            const erroContratacao = document.getElementById('erro-contratacao');
 
-            // TODO: Implementar o clique do botão de confirmação.
+            btnConfirmar.addEventListener('click', async () => {
+                erroContratacao.classList.add('hidden');
+                btnConfirmar.disabled = true;
+                spinnerConfirmar.classList.remove('hidden');
+                txtConfirmar.textContent = 'Processando...';
+
+                try {
+                    const response = await fetch('/api/analise-credito/{{ $analise->id }}/contratar', {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                        },
+                    });
+
+                    const resultado = await response.json();
+
+                    if (!response.ok) {
+                        erroContratacao.textContent = resultado.message ?? 'Não foi possível confirmar a contratação. Tente novamente.';
+                        erroContratacao.classList.remove('hidden');
+                        return;
+                    }
+
+                    modalSucesso.classList.remove('hidden');
+                } catch (erro) {
+                    erroContratacao.textContent = 'Não foi possível se comunicar com o servidor. Tente novamente.';
+                    erroContratacao.classList.remove('hidden');
+                } finally {
+                    btnConfirmar.disabled = false;
+                    spinnerConfirmar.classList.add('hidden');
+                    txtConfirmar.textContent = 'Confirmar Contratação';
+                }
+            });
         });
     </script>
 
